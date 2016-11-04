@@ -12,6 +12,11 @@ class VK {
 		$browser->url = "https://oauth.vk.com/authorize?client_id=" . self::$appID . "&redirect_uri=" . self::$redirectURI . "&display=popup&scope=" . self::$scope . "&response_type=token&v=5.60&state=&revoke=1";
 	}
 
+	static function accessTokenFromURL($url) {
+		preg_match('/^' . str_replace("/", "\/", self::$redirectURI) . '#access_token=([^&]+)&/', $url, $result);
+		self::$access_token = $result[1];
+	}
+
 	static function execQuery($method, $params, $toArray=false) {
 		$url = self::$apiURL . "$method?$params&access_token=" . self::$access_token . "&v=5.60";
 		clipboard_setText($url);
