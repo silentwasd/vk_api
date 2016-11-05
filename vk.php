@@ -23,11 +23,11 @@ class VK {
 
 		$result = file_get_contents($url);
 		$win1251 = iconv("utf-8", "windows-1251", $result);
-		if ($toArray) return self::jsondecode($result);
+		if ($toArray) return self::jsonDecode($result);
 		else return $win1251;
 	}
 
-	static function getFriends($userID="", $fields="sex", $order="hints", $nameCase="nom", $count="") {
+	static function getFriends($userID = null, $fields="sex", $order="hints", $nameCase="nom", $count="") {
 		$friends = self::execQuery("friends.get", "user_id=$userID&order=$order&count=$count&fields=$fields&name_case=$nameCase", true);
 		$_friends = array();
 		foreach ($friends['response']['items'] as $friend) {
@@ -87,23 +87,22 @@ class VK {
 		if ($query['error']) return $query['error']['error_code'];
 	}
 
-	static function jsondecode($sText) {
-	    if (!$sText) return false;
-	    $aJson = json_decode($sText, true);
-	    $aJson = self::iconvarray($aJson);
-	    return $aJson;
+	static private function jsonDecode($json) {
+	    if (!$json) return false;
+	    $decoded = json_decode($json, true);
+	    return self::iconvArray($decoded);
 	}
 
-	static function iconvarray($aJson) {
-		$_aJson = $aJson;
-	    foreach ($_aJson as $key => $value) {
+	static private function iconvArray($jsonArray) {
+		$myArray = $jsonArray;
+	    foreach ($jsonArray as $key => $value) {
 	        if (is_array($value)) {
-	            $_aJson[$key] = self::iconvarray($value);
+	            $myArray[$key] = self::iconvArray($value);
 	        } else {
-	            $_aJson[$key] = iconv('utf-8', 'windows-1251//IGNORE', $value);
+	            $myArray[$key] = iconv('utf-8', 'windows-1251//IGNORE', $value);
 	        }
 	    }
-	    return $_aJson;
+	    return $myArray;
 	}
 }
 
