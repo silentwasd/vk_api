@@ -1,5 +1,4 @@
 <?php
-
 class VK {
 	static public $appID; // Идентификатор приложения
 	static public $redirectURI = "https://oauth.vk.com/blank.html"; // Адрес переадресации
@@ -9,7 +8,12 @@ class VK {
 
 	static function showAuth($form, $browser) {
 		$form->show();
-		$browser->url = "https://oauth.vk.com/authorize?client_id=" . self::$appID . "&redirect_uri=" . self::$redirectURI . "&display=popup&scope=" . self::$scope . "&response_type=token&v=5.60&state=&revoke=1";
+
+		$appID = self::$appID;
+		$redirectURI = self::$redirectURI;
+		$scope = self::$scope;
+
+		$browser->url = "https://oauth.vk.com/authorize?client_id=$appID&redirect_uri=$redirectURI&display=popup&scope=$scope&response_type=token&v=5.60&state=&revoke=1";
 	}
 
 	static function accessTokenFromURL($url) {
@@ -18,73 +22,18 @@ class VK {
 	}
 
 	static function execQuery($method, $params, $toArray=false) {
-		$url = self::$apiURL . "$method?$params&access_token=" . self::$access_token . "&v=5.60";
-		clipboard_setText($url);
+		$apiURL = self::$apiURL;
+		$accessToken = self::$access_token;
+		$url = "{$apiURL}$method?$params&access_token=$accessToken&v=5.60";
 
 		$result = file_get_contents($url);
 		$win1251 = iconv("utf-8", "windows-1251", $result);
-		if ($toArray) return self::jsonDecode($result);
+
+		if ($toArray) {
+			$arr = self::jsonDecode($result);
+			return $arr;
+		}
 		else return $win1251;
-	}
-
-	static function getFriends($userID = null, $fields="sex", $order="hints", $nameCase="nom", $count="") {
-		$friends = self::execQuery("friends.get", "user_id=$userID&order=$order&count=$count&fields=$fields&name_case=$nameCase", true);
-		$_friends = array();
-		foreach ($friends['response']['items'] as $friend) {
-			$_friend = new VK_User();
-			$_friend->syncWithJS($friend);
-			$_friends[] = $_friend;
-		}
-		return $_friends;
-	}
-
-	static function getMessages($out=0, $count=20) {
-		$query = self::execQuery("messages.get", "out=$out&count=$count", true);
-		$msgs = array();
-		foreach ($query['response']['items'] as $item) {
-			$msg = new VK_Message();
-			$msg->syncWithJS($item);
-			$msgs[] = $msg;
-		}
-		return $msgs;
-	}
-
-	static function getDialogs($count=20) {
-		$query = self::execQuery("messages.getDialogs", "count=$count", true);
-		$dialogs = array();
-		foreach ($query['response']['items'] as $item) {
-			$dialog = new VK_Dialog();
-			$dialog->syncWithJS($item);
-
-			$dialogs[] = $dialog;
-		}
-		return $dialogs;
-	}
-
-	static function getDialogMessages($peerID, $count=20, $rev=0) {
-		$query = self::execQuery("messages.getHistory", "peer_id=$peerID&count=$count&rev=$rev", true);
-		$messages = array();
-		foreach ($query['response']['items'] as $item) {
-			$msg = new VK_Message();
-			$msg->syncWithJS($item);
-
-			$messages[] = $msg;
-		}
-		return $messages;
-	}
-
-	static function getUser($userID, $fields="online,sex", $nameCase="nom") {
-		$query = self::execQuery("users.get", "user_ids=$userID&fields=$fields&name_case=$nameCase", true);
-		$user = new VK_User();
-		$user->syncWithJS($query['response'][0]);
-		return $user;
-	}
-
-	static function sendMessage($peerID, $text) {
-		$_text = urlencode(iconv('windows-1251', 'utf-8', $text));
-		$query = self::execQuery("messages.send", "peer_id=$peerID&message=$_text");
-		if ($query['response']) return true;
-		if ($query['error']) return $query['error']['error_code'];
 	}
 
 	static private function jsonDecode($json) {
@@ -110,18 +59,44 @@ class VK_User {
 	public $id;
 	public $name;
 	public $lastName;
+	public $deactivated;
+	public $hidden;
 	public $online;
 	public $sex;
+	public $photo50;
+	public $photo100;
+	public $photo200;
+	public $photoMax;
+	public $status;
+	public $counters;
+
+	function __construct($js_array = false) {
+		if ($js_array) $this->syncWithJS($js_array);
+	}
 
 	function syncWithJS($js_array) {
-		$this->id = $js_array['id'];
-		$this->name = $js_array['first_name'];
-		$this->lastName = $js_array['last_name'];
-		$this->online = $js_array['online'];
-		$this->sex = $js_array['sex'];
+		if (is_array($js_array)) {
+			$this->id = $js_array['id'];
+			$this->name = $js_array['first_name'];
+			$this->lastName = $js_array['last_name'];
+			$this->deactivated = $js_array['deactivated'];
+			$this->hidden = $js_array['hidden'];
+			$this->online = $js_array['online'];
+			$this->sex = $js_array['sex'];
+			$this->photo50 = $js_array['photo_50'];
+			$this->photo100 = $js_array['photo_100'];
+			$this->photo200 = $js_array['photo_200'];
+			$this->photoMax = $js_array['photo_max'];
+			$this->status = $js_array['status'];
+			$this->counters = new VK_Counters($js_array['counters']);
+		}
+		else $this->id = $js_array;
+	}
+
+	function update() {
+		$this->syncWithJS(VK_Users::getUser($this->id, array("online", "sex", "photo_50", "photo_100", "photo_200", "photo_max", "status", "counters"), "nom", true));
 	}
 }
-
 class VK_Message {
 	public $id;
 	public $date;
@@ -132,6 +107,10 @@ class VK_Message {
 	public $title;
 	public $text;
 	public $chatID;
+
+	function __construct($js_array = false) {
+		if ($js_array) $this->syncWithJS($js_array);
+	}
 
 	function syncWithJS($js_array) {
 		$this->id = $js_array['id'];
@@ -151,15 +130,18 @@ class VK_Message {
 		return $peerID;
 	}
 }
-
 class VK_Dialog {
 	public $lastMessage;
 	public $inRead;
 	public $outRead;
 
+	function __construct($js_array = false) {
+		if ($js_array) $this->syncWithJS($js_array);
+	}
+
 	function getMessages($count=20, $rev=0) {
 		$message = $this->lastMessage;
-		return VK::getDialogMessages($message->getPeerID(), $count, $rev);
+		return VK_Messages::getHistory($message->getPeerID(), $count, $rev);
 	}
 
 	function syncWithJS($js_array) {
@@ -168,5 +150,68 @@ class VK_Dialog {
 		$this->lastMessage = $message;
 		$this->inRead = $js_array['in_read'];
 		$this->outRead = $js_array['out_read'];
+	}
+}
+class VK_Error {
+	public $code;
+	public $message;
+
+	function __construct($js_array = false) {
+		if ($js_array) $this->syncWithJS($js_array);
+	}
+
+	function syncWithJS($js_array) {
+		$this->code = $js_array['error_code'];
+		$this->message = $js_array['error_msg'];
+	}
+}
+class VK_Group {
+	public $id;
+	public $name;
+	public $type;
+
+	function __construct($js_array = false) {
+		if ($js_array) $this->syncWithJS($js_array);
+	}
+
+	function syncWithJS($js_array) {
+		if (is_array($js_array)) {
+			$this->id = $js_array['id'];
+			$this->name = $js_array['name'];
+			$this->type = $js_array['type'];
+		}
+		else $this->id = $js_array;
+	}
+}
+
+class VK_Counters {
+	public $albums;
+	public $videos;
+	public $audios;
+	public $photos;
+	public $notes;
+	public $friends;
+	public $groups;
+	public $onlineFriends;
+	public $mutualFriends;
+	public $userVideos;
+	public $followers;
+
+	function __construct($js_array = false) {
+		if ($js_array) $this->syncWithJS($js_array);
+	}
+
+	function syncWithJS($js_array) {
+		$this->albums = $js_array['albums'];
+		$this->videos = $js_array['videos'];
+		$this->audios = $js_array['audios'];
+		$this->photos = $js_array['photos'];
+		$this->notes = $js_array['notes'];
+		$this->friends = $js_array['friends'];
+		$this->groups = $js_array['groups'];
+		$this->onlineFriends = $js_array['online_friends'];
+		$this->mutualFriends = $js_array['mutual_friends'];
+		$this->userVideos = $js_array['user_videos'];
+		$this->followers = $js_array['followers'];
 	}
 }
