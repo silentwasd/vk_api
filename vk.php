@@ -31,7 +31,8 @@ class VK {
 
 		if ($toArray) {
 			$arr = self::jsonDecode($result);
-			return $arr;
+			if (!$arr['error']) return $arr;
+			else return new VK_Error($arr['error']);
 		}
 		else return $win1251;
 	}
@@ -52,6 +53,13 @@ class VK {
 	        }
 	    }
 	    return $myArray;
+	}
+
+	static function checkQuery($query) {
+		if (is_object($query)) {
+			if (get_class($query) == "VK_Error") return false;
+		}
+		else return true;
 	}
 }
 
@@ -213,5 +221,45 @@ class VK_Counters {
 		$this->mutualFriends = $js_array['mutual_friends'];
 		$this->userVideos = $js_array['user_videos'];
 		$this->followers = $js_array['followers'];
+	}
+}
+
+class VK_FriendStatus {
+	public $userID;
+	public $friendStatus;
+	public $requestMessage;
+	public $readState;
+	public $sign;
+
+	function __construct($js_array = false) {
+		if ($js_array) $this->syncWithJS($js_array);
+	}
+
+	function syncWithJS($js_array) {
+		$this->userID = $js_array['user_id'];
+		$this->friendStatus = $js_array['friend_status'];
+		$this->requestMessage = $js_array['request_message'];
+		$this->readState = $js_array['read_state'];
+		$this->sign = $js_array['sign'];
+	}
+}
+
+class VK_FriendDelete {
+	public $success;
+	public $friendDeleted;
+	public $outRequestDeleted;
+	public $inRequestDeleted;
+	public $suggestionDeleted;
+
+	function __construct($js_array = false) {
+		if ($js_array) $this->syncWithJS($js_array);
+	}
+
+	function syncWithJS($js_array) {
+		$this->success = $js_array['success'];
+		$this->friendDeleted = $js_array['friend_deleted'];
+		$this->outRequestDeleted = $js_array['out_request_deleted'];
+		$this->inRequestDeleted = $js_array['in_request_deleted'];
+		$this->suggestionDeleted = $js_array['suggestion_deleted'];
 	}
 }
