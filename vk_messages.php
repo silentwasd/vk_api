@@ -1,4 +1,5 @@
 <?php
+
 class VK_Messages {
 	static function get($out = 0, $count = 20) {
 		$query = VK::execQuery("messages.get", "out=$out&count=$count", true);
@@ -37,7 +38,7 @@ class VK_Messages {
 	}
 
 	static function send($peerID, $text) {
-		$_text = urlencode($text);
+		$_text = urlencode(iconv('windows-1251', 'utf-8', $text));
 		$query = VK::execQuery("messages.send", "peer_id=$peerID&message=$_text", true);
 		if (VK::checkQuery($query)) return $query['response'];
 		else return $query;

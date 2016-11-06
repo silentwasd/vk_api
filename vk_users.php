@@ -1,4 +1,5 @@
 <?php
+
 class VK_Users {
 	static function getUser($userID, $fields = array("online", "sex"), $nameCase = "nom", $asArray = false) {
 		$_fields = implode(",", $fields);
@@ -58,7 +59,7 @@ class VK_Users {
 				foreach ($query['response']['users']['items'] as $item) {
 					$users[] = new VK_User($item);
 				}
-				return array($users, $groups);
+				return array('users' => $users, 'groups' => $groups);
 			}
 		}
 		else return $query;

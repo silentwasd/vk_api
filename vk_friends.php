@@ -1,4 +1,5 @@
 <?php
+
 class VK_Friends {
 	static function get($userID = null, $count = 20, $fields = array("online", "sex"), $order = "hints", $nameCase = "nom") {
 		$_fields = implode(",", $fields);
@@ -14,7 +15,7 @@ class VK_Friends {
 	}
 
 	static function add($userID, $text = "", $follow = null) {
-		$_text = urlencode($text);
+		$_text = urlencode(iconv('windows-1251', 'utf-8', $text));
 		$query = VK::execQuery("friends.add", "user_id=$userID&text=$_text&follow=$follow", true);
 		if (VK::checkQuery($query)) {
 			$result = $query['response'];
